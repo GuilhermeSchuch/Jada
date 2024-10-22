@@ -6,7 +6,8 @@ import {
   DialogSelector,
   PrimaryButton,
   Checkbox,
-  Loader
+  Loader,
+  Footer
 } from "../../components";
 
 // Hooks
