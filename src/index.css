@@ -1,0 +1,23 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  color: #EEEEEE;
+}
+
+body {
+  background-color: #152026;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+  transition: .3s;
+}
+
+.cursor-pointer:hover {
+  opacity: .7;
+}

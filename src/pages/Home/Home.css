@@ -1,0 +1,33 @@
+.buttons-container {
+  display: flex;
+  flex-direction: column;
+  align-items: end;
+  gap: 10px;
+}
+
+.label-file-input {
+  width: 100%;
+  padding: 15px;
+}
+
+.mod-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: rgba(12, 12, 10, .8);
+  border-radius: 20px;;
+}
+
+.backdrop {
+  z-index: 999;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;  
+  background-color: rgba(12, 12, 10, .5);
+}

@@ -1,0 +1,18 @@
+.modal-content {
+  background-color: #152026 !important;
+}
+
+.modal-header {
+  border: none !important;
+  display: flex;
+  justify-content: center;
+}
+
+.modal-title {
+  font-size: 18px;
+}
+
+.dialog-item {
+  padding: 10px;
+  border-radius: 20px;
+}

@@ -1,0 +1,14 @@
+.primary-button {
+  background-color: #0D0C0B;
+  outline: none;
+  border: 1px solid #31403E;
+  border-radius: 10px;
+  padding: 15px;
+  width: 15vw;
+  min-width: 150px;
+  transition: .3s;
+}
+
+.primary-button:hover {
+  opacity: .7;
+}
