@@ -87,16 +87,12 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
   const modsPath = path.join(userDataPath, gameObj.folder, "mods");
   const config = await loadConfig();  
 
-  console.log("config1", config);
-
   let newConfig = {
     ...config,
     settings: {isLoading: true}
   }
 
-  await fs.writeFileSync(configPath, JSON.stringify(newConfig));
-
-  console.log("config2", newConfig);
+  await fs.writeFileSync(configPath, JSON.stringify(newConfig));  
 
   dialog.showOpenDialog({
     properties: ["multiSelections", "openDirectory"],
@@ -110,8 +106,6 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
     
       await fs.writeFileSync(configPath, JSON.stringify(newConfig));
 
-      console.log("config3", newConfig);
-
       return;
     }
 
@@ -119,22 +113,36 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
 
     let allFilePaths = [];
 
-    selectedDirectories.forEach(directory => {
+    selectedDirectories.forEach(async (directory) => {
       const folderName = path.basename(directory);
       const files = getAllFiles(directory);
 
       const backupPath = path.join(userDataPath, gameObj.folder, "backup", folderName);
 
+      const modsFileName = [];
+      const modFiles = [];
+
       files.forEach(file => {
         allFilePaths.push({ filePath: file, folderName: folderName });
         console.log("path.basename(file)", path.basename(file));
+        // modsFileName.push({game: gameObj.folder, mod: folderName, file: path.basename(file)})
+        modFiles.push(path.basename(file))/
+
         searchAndCopyFile(gameObj.game_path, path.basename(file), backupPath);
       });
+
+      modsFileName.push({game: gameObj.folder, mod: folderName, files: modFiles});
+
+      newConfig = {
+        ...config,
+        settings: {isLoading: true},
+        modsFileName
+      }
+    
+      await fs.writeFileSync(configPath, JSON.stringify(newConfig));
     });
 
     await copyFiles(allFilePaths).then(async () => {
-      console.log("foi tudo");
-      
       let currentConfig = await loadConfig();
 
       const newConfig = {
@@ -143,8 +151,6 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
       }
 
       await fs.writeFileSync(configPath, JSON.stringify(newConfig));
-
-      console.log("config4", newConfig);
     });
   }).catch(err => {
     console.error(err);
@@ -229,18 +235,43 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
         const destinationPath = path.join(targetDir, filename);
         console.log("destinationPath", destinationPath);
 
-        fsExtra.copy(fullPath, destinationPath, (err) => {
-          if(err) {
-            console.error("ERROR", err);
-          }
-          else {
-            console.log("SUCESSO");
-          }
-        });
+        try {
+          fsExtra.copy(fullPath, destinationPath, (err) => {
+            if(err) {
+              console.error("ERROR 1", err);
+            }
+            else {
+              console.log("SUCESSO");
+            }
+          });  
+        } catch (error) {
+          
+        }
+
       }
     });
     
   }
+});
+
+// Remove mods
+ipcMain.handle("remove-mod", async (event, gameObj, modObj) => {
+  const mainFolder = gameObj.game_path.split("\\").pop();
+  
+  const backupPath = path.join(userDataPath, gameObj.folder, "backup", modObj.title);
+  const gamepath = path.join(gameObj.game_path.split(mainFolder)[0]);
+
+  console.log("backupPath", backupPath);
+  console.log("gamepath", gamepath);
+
+  await fsExtra.copy(backupPath, gamepath).then((err) => {
+    if(err) {
+      console.error("ERROR", err);
+    }
+    else {
+      console.log("DESINSTALADO");
+    }
+  })
 });
 
 // Uninstall mods
@@ -259,6 +290,14 @@ ipcMain.handle("uninstall-mod", async (event, gameObj, modObj) => {
     }
     else {
       console.log("DESINSTALADO");
+      fsExtra.remove(backupPath, (err) => {
+        if(err) {
+          console.log("ERRO", err)
+        }
+        else{
+          console.log("REMOVIDO da pasta")
+        }
+      })
     }
   })
 });
@@ -340,7 +379,6 @@ ipcMain.handle("load-mod-list", async (event, gameObj) => {
 
   const saveConfig = async () => {
     const config = await loadConfig();
-    console.log("config5", config);
 
     const modsPath = path.join(userDataPath, gameObj.folder, "mods");
     const folders = await getFoldersInDirectory(modsPath);
@@ -350,47 +388,13 @@ ipcMain.handle("load-mod-list", async (event, gameObj) => {
     // Create a map of existing mods for quick lookup by title
     const existingModsMap = new Map(config.mods.map(mod => [mod.title, mod]));
 
-    // folders.forEach(async (folder) => {
-    //   let directories = '';
-    //   let backupPath = path.join(userDataPath, gameObj.folder, "backup", folder);
-    //   let directory = getDirectories(backupPath);
-
-    //   const imagePaths = path.join(modsPath, folder);
-    //   // const images = await hasImagesInFolder(imagePaths);
-    //   // let previewImage = '';
-      
-    //   // if(images.length > 0) {
-    //   //   previewImage = images[0];
-    //   // }
-
-    //   while(directory.length) {
-    //     directories = directories.concat("\\", directory[0]);
-    //     backupPath = path.join(backupPath, directory[0]);
-    //     directory = getDirectories(backupPath);
-    //   }
-
-    //   // Check if this mod already exists in the previous config
-    //   const existingMod = existingModsMap.get(folder);
-
-    //   const modObj = {
-    //     id: existingMod ? existingMod.id : uuid.v4(), // Keep existing ID or generate a new one
-    //     title: folder,
-    //     selected: existingMod ? existingMod.selected : true, // Use the existing selected value
-    //     game: gameObj.folder,
-    //     modPath: directories,
-    //     // previewImage
-    //   };
-      
-    //   mods.push(modObj);
-    // })
-
-    for (const folder of folders) {
+    for(const folder of folders) {
       let directories = '';
       let backupPath = path.join(userDataPath, gameObj.folder, "backup", folder);
       let directory = getDirectories(backupPath);
     
       const imagePaths = path.join(modsPath, folder);
-      const images = await hasImagesInFolder(imagePaths); // Correctly await the function
+      const images = await hasImagesInFolder(imagePaths);
       let previewImage = '';
     
       if(images.length > 0) {
@@ -411,7 +415,8 @@ ipcMain.handle("load-mod-list", async (event, gameObj) => {
         selected: existingMod ? existingMod.selected : true,
         game: gameObj.folder,
         modPath: directories,
-        previewImage // Use the previewImage if available
+        // fileNames: [],
+        previewImage
       };
     
       mods.push(modObj);
@@ -484,7 +489,7 @@ const createWindow = async () => {
     minWidth: 700,
     height: 700,
     minHeight: 700,
-    title: "Mod Manager",
+    title: "Jada Mod Manager",
     fullscreen: false,
     resizable: true,
     // icon: path.join(__dirname, "src/assets/icon.ico"),
@@ -495,9 +500,9 @@ const createWindow = async () => {
     },
   })
 
-  // win.loadFile(path.join(__dirname, "src/index.html"));
-  win.loadURL('http://localhost:3000');
-  isDev && win.webContents.openDevTools();
+  win.loadURL(`file://${path.join(__dirname, "../build/index.html")}`);
+  // win.loadURL("http://localhost:3000");
+  // win.webContents.openDevTools();
 }
 
 const protocolName = "local-path";

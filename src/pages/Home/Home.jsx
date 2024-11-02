@@ -48,7 +48,10 @@ const Home = () => {
     setSelectedGame(item);
 
     if(item.folder === "RE6" || item.name === "Resident Evil 6") {
-      document.body.style.backgroundImage = `url("/assets/images/re6.jpg")`;
+      // document.body.style.backgroundImage = `url("/assets/images/re6.jpg")`;
+      const imagePath = `${window.location.origin}/resources/assets/images/re6.jpg`;
+      console.log("imagePath", imagePath)
+      document.body.style.backgroundImage = `url(${imagePath})`;
     }
 
     const newGames = games.map((game) =>
@@ -80,7 +83,7 @@ const Home = () => {
         if(!loadSettings.settings.isLoading) {
           setIsLoading(false);
           clearInterval(attempter);
-          getMods(selectedGame);
+          await getMods(selectedGame);
         }
       }
     }, 3000)
@@ -88,6 +91,7 @@ const Home = () => {
 
   const getMods = async (gameObj) => {
     const data = await window.electronAPI.loadModList(gameObj);
+    console.log("dataMods", data);
 
     if(data?.mods) {
       setMods(data.mods);
@@ -113,13 +117,12 @@ const Home = () => {
     window?.electronAPI?.saveConfig(updatedConfig);
 
     if(!changedMod.selected) {
-      window.electronAPI.uninstallMod(selectedGame, changedMod);
+      window.electronAPI.removeMod(selectedGame, changedMod);
     }
     else {
       window.electronAPI.appendMod(selectedGame, changedMod);
     }
   };
-
   return (
     <div className="container-fluid">
       <div className="col-12">
@@ -140,6 +143,7 @@ const Home = () => {
                     <Checkbox
                       key={mod.id}
                       data={mod}
+                      selectedGame={selectedGame}
                       onSelectionChange={() => onSelectionChange(mod.id)}
                     />                    
                   ))}

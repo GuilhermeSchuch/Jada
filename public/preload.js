@@ -11,8 +11,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   saveConfig: async (config) => ipcRenderer.invoke("save-config", config),
   installMod: async (gameObj) => ipcRenderer.invoke("install-mod", gameObj),
   loadModList: async (gameObj) => ipcRenderer.invoke("load-mod-list", gameObj),
-  uninstallMod: async (gameObj, modObj) => ipcRenderer.invoke("uninstall-mod", gameObj, modObj),
+  removeMod: async (gameObj, modObj) => ipcRenderer.invoke("remove-mod", gameObj, modObj),
   appendMod: async (gameObj, modObj) => ipcRenderer.invoke("append-mod", gameObj, modObj),
+  uninstallMod: async (gameObj, modObj) => ipcRenderer.invoke("uninstall-mod", gameObj, modObj),
 });
 
 
