@@ -86,7 +86,7 @@ const Home = () => {
           await getMods(selectedGame);
         }
       }
-    }, 3000)
+    }, 5000)
   }
 
   const getMods = async (gameObj) => {
@@ -98,7 +98,9 @@ const Home = () => {
     }
   }
 
-  const onSelectionChange = (id) => {
+  const onSelectionChange = async (id) => {
+    const data = await window.electronAPI.loadConfig();
+
     let changedMod = {};
 
     mods.map((mod) => {
@@ -111,7 +113,7 @@ const Home = () => {
 
     setMods(updatedMods);
   
-    const updatedConfig = { ...configData, games, mods: updatedMods };
+    const updatedConfig = { ...data, games, mods: updatedMods };
     console.log("updatedConfig", updatedConfig);
 
     window?.electronAPI?.saveConfig(updatedConfig);
@@ -120,9 +122,23 @@ const Home = () => {
       window.electronAPI.removeMod(selectedGame, changedMod);
     }
     else {
-      window.electronAPI.appendMod(selectedGame, changedMod);
+      const response = await window.electronAPI.appendMod(selectedGame, changedMod);
+      const data = await window.electronAPI.loadConfig();
+      console.log("response", response);
+
+      const updatedMods = mods.map((mod) =>
+        mod.id === response.modObj.id ? { ...mod, selected: !response.error } : mod
+      );
+
+      setMods(updatedMods);
+  
+      const updatedConfig = { ...data, games, mods: updatedMods };
+      console.log("updatedConfig", updatedConfig);
+
+      window?.electronAPI?.saveConfig(updatedConfig);
     }
   };
+
   return (
     <div className="container-fluid">
       <div className="col-12">
@@ -162,7 +178,6 @@ const Home = () => {
             {selectedGame && (
               <>
                 <PrimaryButton onClick={installMods}>Install mods</PrimaryButton>
-
                 <PrimaryButton onClick={() => getMods(selectedGame)}>Refresh mods</PrimaryButton>
               </>
             )}

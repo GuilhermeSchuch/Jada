@@ -23,19 +23,17 @@ const Checkbox = ({ data, selectedGame, onSelectionChange }) => {
     }
   }
 
-  const teste = () => {
-    window.electronAPI.uninstallMod(selectedGame, data)
-  }
-
   return (
     <div className="checkbox-wrapper-4 d-flex align-items-center">
       <div className="m-0 p-0">
         <div
           className="mod-preview preview-hidden"
           id={`preview-${data.id}`}
+          // const imagePath = `${window.location.origin}/resources/assets/images/re6.jpg`;
         >
           <img
-            src={data.previewImage ? `local-path:///${data.previewImage}` : "https://placehold.co/600x400?text=No+preview"}
+            src={data.previewImage ? `local-path:///${data.previewImage}` : `${window.location.origin}/resources/assets/images/no-preview.jpg`}
+            // src={data.previewImage ? `local-path:///${data.previewImage}` : "https://placehold.co/600x400?text=No+preview"}
           />
         </div>
 
