@@ -2,8 +2,8 @@ footer {
   position: fixed;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: end;
   height: 5vh;
   bottom: 0;
-  width: 100%;  
+  width: 100%;
 }

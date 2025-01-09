@@ -32,8 +32,15 @@ const initialConfig = {
       "id": 2,
       "name": "Resident Evil 5",
       "selected": false,
-      "hierarchy": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Resident Evil 6",
+      "hierarchy": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Resident Evil 5\\nativePC",
       "folder": "RE5"
+    },
+    {
+      "id": 3,
+      "name": "Resident Evil 4 (Remake)",
+      "selected": false,
+      "hierarchy": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Resident Evil 4\\nativePC",
+      "folder": "RE4"
     }
   ],
   "mods": [],
@@ -93,7 +100,7 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
     settings: {isLoading: true}
   }
 
-  await fs.writeFileSync(configPath, JSON.stringify(newConfig));  
+  await fs.writeFileSync(configPath, JSON.stringify(newConfig));
 
   dialog.showOpenDialog({
     properties: ["multiSelections", "openDirectory"],
@@ -185,27 +192,19 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
         if(fileExists) {
           duplicateFiles.push(path.basename(file));
           console.log("duplicateFiles", duplicateFiles);
-          // console.log("filePath", file);
-          // console.log("file", path.basename(file));
-          // console.log("config.modsFileName", config.modsFileName);
-          // console.log("gameObj", gameObj);
-
-          // const dirPath = path.join(userDataPath, gameObj.folder, "backup", config.modsFileName[0].mod);
-          // console.log("dirPath", dirPath);
-          // searchAndCopyFile(dirPath, path.basename(file), backupPath);
-          // return;
         }
         else {
-          searchAndCopyFile(gameObj.game_path, path.basename(file), backupPath);
-  
-          allFilePaths.push({ filePath: file, folderName: folderName });
-          console.log("path.basename(file)", path.basename(file));
-          // modsFileName.push({game: gameObj.folder, mod: folderName, file: path.basename(file)})
-          modFiles.push(path.basename(file));
+          if(!duplicateFiles.length) {
+            searchAndCopyFile(gameObj.game_path, path.basename(file), backupPath);
+    
+            allFilePaths.push({ filePath: file, folderName: folderName });
+            console.log("path.basename(file)", path.basename(file));
+            modFiles.push(path.basename(file));
+          }
         }
       });
 
-      if(!fileExists) {
+      if(!fileExists && !duplicateFiles.length) {
         modsFileName.push({game: gameObj.folder, mod: folderName, files: modFiles});
   
         newConfig = {
@@ -228,7 +227,7 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
       dialog.showMessageBox({
         title: "Jada",
         type: "warning",
-        message: `Mods if the following files already exist and were not copied: ${duplicateFiles.join(", ")}`,
+        message: `The mod was not installed!\n\nMods if the following files already exist and were not copied: ${duplicateFiles.join(", ")}`,
       }).then(async () => {
         const config = await loadConfig();
 
@@ -263,7 +262,7 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
       fsExtra.copy(filePath, destinationPath, (err) => {
 
       });
-    });
+    })
   }
 
   const getAllFiles = (dirPath, arrayOfFiles = []) => {
@@ -417,30 +416,79 @@ ipcMain.handle("remove-mod", async (event, gameObj, modObj) => {
 
 // Uninstall mods
 ipcMain.handle("uninstall-mod", async (event, gameObj, modObj) => {
+  console.log("UNISTALL!!!");
+
   const mainFolder = gameObj.game_path.split("\\").pop();
+
+  const loadConfig = async () => {
+    if(fs.existsSync(configPath)) {    
+      const data = await fs.readFileSync(configPath, 'utf-8');
+      if(data) return JSON.parse(data);
+    }
+    return [];
+  }
+  
+  const config = await loadConfig();
+
+  let newConfig = {
+    ...config,
+    settings: {isLoading: true}
+  }
+
+  await fs.writeFileSync(configPath, JSON.stringify(newConfig));
   
   const backupPath = path.join(userDataPath, gameObj.folder, "backup", modObj.title);
+  const modPath = path.join(userDataPath, gameObj.folder, "mods", modObj.title);
   const gamepath = path.join(gameObj.game_path.split(mainFolder)[0]);
 
   console.log("backupPath", backupPath);
+  console.log("modPath", modPath);
   console.log("gamepath", gamepath);
 
-  await fsExtra.copy(backupPath, gamepath).then((err) => {
+  await fsExtra.copy(backupPath, gamepath).then(async (err) => {
     if(err) {
       console.error("ERROR", err);
     }
     else {
       console.log("DESINSTALADO");
-      fsExtra.remove(backupPath, (err) => {
+
+      await removeFromFolder();
+    }
+  })
+
+  async function removeFromFolder() {
+    try {
+      fsExtra.remove(backupPath, async (err) => {
         if(err) {
           console.log("ERRO", err)
         }
         else{
           console.log("REMOVIDO da pasta")
+
+          fsExtra.remove(modPath, async (err) => {
+            if(err) {
+              console.log("ERRO", err)
+            }
+            else{
+              console.log("REMOVIDO da pasta")
+              let modsFileName = config.modsFileName.filter(mod => mod.mod !== modObj.title);
+
+              newConfig = {
+                ...config,
+                modsFileName,
+                settings: {isLoading: false}
+              }
+
+              await fs.writeFileSync(configPath, JSON.stringify(newConfig));
+            }
+          })
         }
       })
+    } catch (error) {
+      
     }
-  })
+
+  }
 });
 
 // Append mods
@@ -785,7 +833,7 @@ const createWindow = async () => {
     },
   })
 
-  win.loadURL(`file://${path.join(__dirname, "../build/index.html")}`);
+  // win.loadURL(`file://${path.join(__dirname, "../build/index.html")}`);
   win.loadURL("http://localhost:3000");
   // win.webContents.openDevTools();
 }

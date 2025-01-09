@@ -12,6 +12,7 @@ import {
 
 // Hooks
 import { useEffect, useState } from "react";
+import useUpdateButtonsOnResize from "../../hooks/useUpdateButtonsOnResize";
 
 const Home = () => {
   const [configData, setConfigData] = useState([]);
@@ -42,16 +43,24 @@ const Home = () => {
     getData();
   }, []);
   
+  useUpdateButtonsOnResize("primary-button", 800, selectedGame);
+
 
   const handleSelection = (item) => {
     console.log("Item selected", item);
     setSelectedGame(item);
 
     if(item.folder === "RE6" || item.name === "Resident Evil 6") {
-      // document.body.style.backgroundImage = `url("/assets/images/re6.jpg")`;
       const imagePath = `${window.location.origin}/resources/assets/images/re6.jpg`;
-      console.log("imagePath", imagePath)
       document.body.style.backgroundImage = `url(${imagePath})`;
+
+      // document.body.style.backgroundImage = `url("/assets/images/re6.jpg")`;
+    }
+    else if(item.folder === "RE4" || item.name === "Resident Evil 4") {
+      const imagePath = `${window.location.origin}/resources/assets/images/re4.webp`;
+      document.body.style.backgroundImage = `url(${imagePath})`;
+
+      document.body.style.backgroundImage = `url("/assets/images/re4.webp")`;
     }
 
     const newGames = games.map((game) =>
@@ -66,11 +75,11 @@ const Home = () => {
     setIsLoading(true);
 
     const data = await window?.electronAPI?.installMod(selectedGame);
-    setConfigData(data);    
+    // setConfigData(data);
 
-    if(data?.mods) {
-      setMods(data.mods);
-    }
+    // if(data?.mods) {
+    //   setMods(data.mods);
+    // }
 
     let loadSettings;
 
@@ -82,11 +91,12 @@ const Home = () => {
 
         if(!loadSettings.settings.isLoading) {
           setIsLoading(false);
-          clearInterval(attempter);
           await getMods(selectedGame);
+
+          clearInterval(attempter);
         }
       }
-    }, 5000)
+    }, 1000)
   }
 
   const getMods = async (gameObj) => {
@@ -154,12 +164,16 @@ const Home = () => {
               <>
                 <h2>Mod list</h2>
 
-                <div className="mt-2">
+                <div className="mod-list-container mt-2">
                   {mods && mods.map((mod) => (
                     <Checkbox
                       key={mod.id}
                       data={mod}
                       selectedGame={selectedGame}
+                      setIsLoading={setIsLoading}
+                      setConfigData={setConfigData}
+                      getMods={getMods}
+                      setMods={setMods}
                       onSelectionChange={() => onSelectionChange(mod.id)}
                     />                    
                   ))}

@@ -2,9 +2,12 @@
 import "./Checkbox.css";
 
 // Icons
-import Bin from "../Icons/Bin";
+import { DeleteIcon } from "../Icons";
 
-const Checkbox = ({ data, selectedGame, onSelectionChange }) => {
+// Swal
+import Swal from "sweetalert2";
+
+const Checkbox = ({ data, selectedGame, onSelectionChange, setIsLoading, getMods }) => {
   const showModPreview = (id) => {
     const previewElement = document.getElementById(`preview-${id}`);
 
@@ -23,9 +26,54 @@ const Checkbox = ({ data, selectedGame, onSelectionChange }) => {
     }
   }
 
+  const handleDelete = () => {
+    Swal.fire({
+      title: "Delete this mod?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      background: "rgb(12, 12, 10)",
+      color: "#EEEEEE",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!"
+    }).then(async (result) => {
+      if(result.isConfirmed) {
+        setIsLoading(true);
+
+        await window.electronAPI.uninstallMod(selectedGame, data);
+
+        let loadSettings;
+
+        const attempter = setInterval(async () => {
+          loadSettings = await window.electronAPI.loadConfig();
+    
+          if(loadSettings.settings) {
+            console.log("loadSettings.settings", loadSettings.settings);
+    
+            if(!loadSettings.settings.isLoading) {
+              setIsLoading(false);
+              clearInterval(attempter);
+              await getMods(selectedGame);
+
+              Swal.fire({
+                title: "Success!",
+                background: "rgb(12, 12, 10)",
+                confirmButtonColor: "#3085d6",
+                color: "#EEEEEE",
+                text: "Your mod has been deleted.",
+                icon: "success"
+              });
+            }
+          }
+        }, 1000)
+      }
+    });
+  }
+
   return (
     <div className="checkbox-wrapper-4 d-flex align-items-center">
-      <div className="m-0 p-0">
+      <div className="d-flex align-items-center m-0 p-0">
         <div
           className="mod-preview preview-hidden"
           id={`preview-${data.id}`}
@@ -66,13 +114,9 @@ const Checkbox = ({ data, selectedGame, onSelectionChange }) => {
         </svg>
       </div>
 
-      {/* <div className="uninstall-mod cursor-pointer">
-        <button>
-          <Bin />
-        </button>
-
-      </div> */}
-
+      <button className="checkbox-delete-button" onClick={handleDelete}>
+        <DeleteIcon />
+      </button>
     </div>
   )
 }
