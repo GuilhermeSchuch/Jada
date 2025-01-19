@@ -34,13 +34,6 @@ const initialConfig = {
       "selected": false,
       "hierarchy": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Resident Evil 5\\nativePC",
       "folder": "RE5"
-    },
-    {
-      "id": 3,
-      "name": "Resident Evil 4 (Remake)",
-      "selected": false,
-      "hierarchy": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Resident Evil 4\\nativePC",
-      "folder": "RE4"
     }
   ],
   "mods": [],
@@ -102,6 +95,8 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
 
   await fs.writeFileSync(configPath, JSON.stringify(newConfig));
 
+  let allFilePaths = [];
+
   dialog.showOpenDialog({
     properties: ["multiSelections", "openDirectory"],
     title: "Select your mods",
@@ -119,7 +114,6 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
 
     const selectedDirectories = result.filePaths;
 
-    let allFilePaths = [];
     let duplicateMods = [];
     let duplicateFiles = [];
     let fileExists;
@@ -198,8 +192,18 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
             searchAndCopyFile(gameObj.game_path, path.basename(file), backupPath);
     
             allFilePaths.push({ filePath: file, folderName: folderName });
+            console.log("allFilePaths", allFilePaths);
+
             console.log("path.basename(file)", path.basename(file));
-            modFiles.push(path.basename(file));
+
+            const modExtension = path.basename(file).split('.').pop();
+            const extensions = [
+              "info", "ini", "jpeg", "png", "webp", "jpg"
+            ]
+
+            if(!extensions.includes(modExtension) && !path.basename(file).toLowerCase().includes("readme")) {
+              modFiles.push(path.basename(file));
+            }
           }
         }
       });
@@ -280,7 +284,7 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
     });
 
     return arrayOfFiles;
-  };
+  };  
 
   const searchAndCopyFile = (dirPath, filename, targetDir) => {
     const files = fs.readdirSync(dirPath);
@@ -302,7 +306,7 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
         
         copyFilesPromise(fullPath, destinationPath, filename, dirPath);
 
-      }
+      }      
     });
   };
 
@@ -316,44 +320,12 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
     }
   }
 
-  // const copyFilesToGame = (dirPath, filename, targetDir) => {
-  //   const files = fs.readdirSync(dirPath);
+  let filesCopied = [];
 
-  //   console.log("dirPath", dirPath);
-  //   console.log("targetDir", targetDir);
-    
-  //   files.forEach((file) => {
-  //     const fullPath = path.join(dirPath, file);
-  //     console.log("fullPath", fullPath);
-  //     console.log("file", file);
-  
-  //     if(fs.statSync(fullPath).isDirectory()) {
-  //       copyFilesToGame(fullPath, filename, targetDir);
-  //     }
-  //     else if(file === filename) {
-  //       const destinationPath = path.join(targetDir, filename);
-  //       console.log("destinationPath", destinationPath);
-
-  //       try {
-  //         fsExtra.copy(fullPath, destinationPath, (err) => {
-  //           if(err) {
-  //             console.error("ERROR 1", err);
-  //           }
-  //           else {
-  //             console.log("SUCESSO");
-  //           }
-  //         });  
-  //       } catch (error) {
-          
-  //       }
-
-  //     }
-  //   });
-    
-  // }
-
-  const copyFilesToGame = (dirPath, filename, targetDir) => {
+  const copyFilesToGame = async (dirPath, filename, targetDir) => {
     const files = fs.readdirSync(dirPath);
+
+    console.log("FILENAME: ", filename);
   
     console.log("dirPath", dirPath);
     console.log("targetDir", targetDir);
@@ -363,9 +335,11 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
       console.log("fullPath", fullPath);
       console.log("file", file);
   
-      if (fs.statSync(fullPath).isDirectory()) {
+      if(fs.statSync(fullPath).isDirectory()) {
         copyFilesToGame(fullPath, filename, targetDir);
-      } else if (file === filename) {
+      }
+      else if (file === filename) {
+        filesCopied.push(filename);
         const destinationPath = path.join(targetDir, filename);
         console.log("destinationPath", destinationPath);
   
@@ -376,6 +350,14 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
           try {
             fsExtra.copySync(fullPath, destinationPath, { overwrite: true });
             console.log("SUCESSO: Arquivo copiado.");
+
+            console.log("filesCopied", filesCopied);
+            console.log("allFilePaths", allFilePaths);
+
+            function validateCopiedFiles() {
+              
+            }
+
           } catch (err) {
             if (err.code === 'EBUSY' && attempt < maxRetries) {
               console.log(`Arquivo ocupado, tentativa ${attempt + 1} de ${maxRetries}...`);
@@ -390,6 +372,15 @@ ipcMain.handle("install-mod", async (event, gameObj) => {
         tryCopy(); // Chama a lógica de cópia com tentativas
       }
     });
+
+    let currentConfig = await loadConfig();
+
+      const newConfig = {
+        ...currentConfig,
+        settings: {isLoading: false}
+      }
+
+      await fs.writeFileSync(configPath, JSON.stringify(newConfig));
   };
   
 });
@@ -617,7 +608,16 @@ ipcMain.handle("append-mod", async (event, gameObj, modObj) => {
 
     for (const [index, path] of otherModsPath.entries()) {
       const commonFiles = await compareDirectories(path, dirPath);
-      if (commonFiles.length) modsWithSameFiles.push(otherModsName[index]);
+      if(commonFiles.length) {
+        const modExtension = path.basename(otherModsName[index]).split('.').pop();
+        const extensions = [
+          ".info", ".ini", "jpeg", "png", "webp", "jpg"
+        ]
+
+        if(!extensions.includes(modExtension)) {
+          modsWithSameFiles.push(otherModsName[index]);
+        }
+      }
     }
 
     console.log("modsWithSameFiles", modsWithSameFiles);
@@ -703,7 +703,239 @@ ipcMain.handle("append-mod", async (event, gameObj, modObj) => {
 });
 
 // Get mod list
-ipcMain.handle("load-mod-list", async (event, gameObj) => {  
+// ipcMain.handle("load-mod-list", async (event, gameObj) => {  
+//   const loadConfig = async () => {
+//     if(fs.existsSync(configPath)) {    
+//       const data = await fs.readFileSync(configPath, 'utf-8');
+//       if(data) return JSON.parse(data);
+//     }
+//     return [];
+//   }
+
+//   const saveConfig = async () => {
+//     const config = await loadConfig();
+
+//     const modsPath = path.join(userDataPath, gameObj.folder, "mods");
+//     const folders = await getFoldersInDirectory(modsPath);
+
+//     const mods = [];
+
+//     // Create a map of existing mods for quick lookup by title
+//     const existingModsMap = new Map(config.mods.map(mod => [mod.title, mod]));
+
+//     for(const folder of folders) {
+//       let directories = '';
+//       let backupPath = path.join(userDataPath, gameObj.folder, "backup", folder);
+//       let directory = getDirectories(backupPath);
+    
+//       const imagePaths = path.join(modsPath, folder);
+//       const images = await hasImagesInFolder(imagePaths);
+//       let previewImage = '';
+    
+//       if(images.length > 0) {
+//         previewImage = path.join(modsPath, folder, images[0]);        
+//       }      
+    
+//       while(directory.length) {
+//         directories = directories.concat("\\", directory[0]);
+//         backupPath = path.join(backupPath, directory[0]);
+//         directory = getDirectories(backupPath);
+//       }
+    
+//       const existingMod = existingModsMap.get(folder);
+    
+//       const modObj = {
+//         id: existingMod ? existingMod.id : uuid.v4(),
+//         title: folder,
+//         selected: existingMod ? existingMod.selected : true,
+//         game: gameObj.folder,
+//         modPath: directories,
+//         previewImage
+//       };
+    
+//       mods.push(modObj);
+//     }
+    
+
+//     const newConfig = {...config, mods};
+//     console.log("config6", newConfig);
+
+//     await fs.writeFileSync(configPath, JSON.stringify(newConfig));
+
+//     return newConfig;
+//   }
+
+//   function getDirectories(path) {
+//     return fs.readdirSync(path).filter(function (file) {
+//       return fs.statSync(path+'/'+file).isDirectory();
+//     });
+//   }
+
+//   async function getFoldersInDirectory(directoryPath) {
+//     try {
+//       console.log("directoryPath", directoryPath);
+      
+//       const items = await fsExtra.readdir(directoryPath);
+      
+//       const folders = await Promise.all(items.map(async item => {
+//         const itemPath = path.join(directoryPath, item);
+//         const stats = await fsExtra.stat(itemPath);
+//         return stats.isDirectory() ? item : null;
+//       }));
+
+//       console.log("folders", folders);
+  
+//       return folders.filter(Boolean);
+//     } catch (err) {
+//       console.error('Error reading the directory:', err);
+//       return [];
+//     }
+//   }
+
+//   async function hasImagesInFolder(directoryPath) {
+//     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif'];
+
+//     try {
+//       const items = await fsExtra.readdir(directoryPath);
+  
+//       // Check for image files based on their extension
+//       const images = items.filter(item => {
+//         const itemPath = path.join(directoryPath, item);
+//         const ext = path.extname(itemPath).toLowerCase();
+//         return imageExtensions.includes(ext);
+//       });
+
+//       return images;
+//     } catch (err) {
+//       console.error('Error reading the directory for images:', err);
+//       return false;
+//     }
+//   }
+
+//   return await saveConfig();
+// });
+
+ipcMain.handle("load-mod-list", async (event, gameObj) => {
+  const loadConfig = async () => {
+    try {
+      if (fs.existsSync(configPath)) {
+        const data = await fs.readFileSync(configPath, "utf-8");
+        if (data) return JSON.parse(data);
+      }
+    } catch (err) {
+      console.error("Error loading config:", err);
+    }
+    return [];
+  };
+
+  const saveConfig = async () => {
+    try {
+      const config = await loadConfig();
+      const modsPath = path.join(userDataPath, gameObj.folder, "mods");
+      const folders = await getFoldersInDirectory(modsPath);
+
+      const mods = [];
+      const existingModsMap = new Map(config.mods.map((mod) => [mod.title, mod]));
+
+      for (const folder of folders) {
+        let directories = "";
+        let backupPath = path.join(userDataPath, gameObj.folder, "backup", folder);
+
+        let directory = getDirectories(backupPath);
+        const imagePaths = path.join(modsPath, folder);
+        const images = await hasImagesInFolder(imagePaths);
+        let previewImage = "";
+
+        if (images.length > 0) {
+          previewImage = path.join(modsPath, folder, images[0]);
+        }
+
+        while (directory.length) {
+          directories = directories.concat("\\", directory[0]);
+          backupPath = path.join(backupPath, directory[0]);
+          directory = getDirectories(backupPath);
+        }
+
+        const existingMod = existingModsMap.get(folder);
+
+        const modObj = {
+          id: existingMod ? existingMod.id : uuid.v4(),
+          title: folder,
+          selected: existingMod ? existingMod.selected : true,
+          game: gameObj.folder,
+          modPath: directories,
+          previewImage,
+        };
+
+        mods.push(modObj);
+      }
+
+      const newConfig = { ...config, mods };
+      console.log("config6", newConfig);
+
+      await fs.writeFileSync(configPath, JSON.stringify(newConfig));
+      return newConfig;
+    } catch (err) {
+      console.error("Error saving config:", err);
+      return { mods: [] }; // Return an empty mods list in case of error
+    }
+  };
+
+  const getDirectories = (dirPath) => {
+    try {
+      return fs.readdirSync(dirPath).filter((file) =>
+        fs.statSync(path.join(dirPath, file)).isDirectory()
+      );
+    } catch (err) {
+      console.error("Error reading directories:", err);
+      return [];
+    }
+  };
+
+  const getFoldersInDirectory = async (directoryPath) => {
+    try {
+      const items = await fsExtra.readdir(directoryPath);
+      const folders = await Promise.all(
+        items.map(async (item) => {
+          const itemPath = path.join(directoryPath, item);
+          const stats = await fsExtra.stat(itemPath);
+          return stats.isDirectory() ? item : null;
+        })
+      );
+      return folders.filter(Boolean);
+    } catch (err) {
+      console.error("Error reading the directory:", err);
+      return [];
+    }
+  };
+
+  const hasImagesInFolder = async (directoryPath) => {
+    const imageExtensions = [".jpg", ".jpeg", ".png", ".gif"];
+    try {
+      const items = await fsExtra.readdir(directoryPath);
+      const images = items.filter((item) => {
+        const itemPath = path.join(directoryPath, item);
+        const ext = path.extname(itemPath).toLowerCase();
+        return imageExtensions.includes(ext);
+      });
+      return images;
+    } catch (err) {
+      console.error("Error reading the directory for images:", err);
+      return [];
+    }
+  };
+
+  try {
+    return await saveConfig();
+  } catch (err) {
+    console.error("Error in load-mod-list handler:", err);
+    return { error: "Failed to load mod list. Please try again later." };
+  }
+});
+
+
+// Add game to config.json file
+ipcMain.handle("add-game", async (event, gameObj) => {
   const loadConfig = async () => {
     if(fs.existsSync(configPath)) {    
       const data = await fs.readFileSync(configPath, 'utf-8');
@@ -712,107 +944,67 @@ ipcMain.handle("load-mod-list", async (event, gameObj) => {
     return [];
   }
 
-  const saveConfig = async () => {
-    const config = await loadConfig();
+  const getGameFolders = (data) => {
+    if(!data || !Array.isArray(data.games)) {
+      throw new Error("O objeto fornecido não contém um array 'games'.");
+    }
+  
+    return data.games.map(game => game.folder);
+  }
 
-    const modsPath = path.join(userDataPath, gameObj.folder, "mods");
-    const folders = await getFoldersInDirectory(modsPath);
+  const generateFolderName = (name) => {
+    const existingFolders = getGameFolders(config);
+    let folder = '';
 
-    const mods = [];
-
-    // Create a map of existing mods for quick lookup by title
-    const existingModsMap = new Map(config.mods.map(mod => [mod.title, mod]));
-
-    for(const folder of folders) {
-      let directories = '';
-      let backupPath = path.join(userDataPath, gameObj.folder, "backup", folder);
-      let directory = getDirectories(backupPath);
-    
-      const imagePaths = path.join(modsPath, folder);
-      const images = await hasImagesInFolder(imagePaths);
-      let previewImage = '';
-    
-      if(images.length > 0) {
-        previewImage = path.join(modsPath, folder, images[0]);        
-      }      
-    
-      while(directory.length) {
-        directories = directories.concat("\\", directory[0]);
-        backupPath = path.join(backupPath, directory[0]);
-        directory = getDirectories(backupPath);
-      }
-    
-      const existingMod = existingModsMap.get(folder);
-    
-      const modObj = {
-        id: existingMod ? existingMod.id : uuid.v4(),
-        title: folder,
-        selected: existingMod ? existingMod.selected : true,
-        game: gameObj.folder,
-        modPath: directories,
-        previewImage
-      };
-    
-      mods.push(modObj);
+    if(name.includes(' ')) {
+      name.split(' ').forEach((breakedName) => {
+        folder += Array.from(breakedName)[0]        
+      })
+    }
+    else {
+      folder = name;
     }
     
+    let suffix = 1;
+    let uniqueFolder = folder;
 
-    const newConfig = {...config, mods};
-    console.log("config6", newConfig);
+    while(existingFolders.includes(uniqueFolder)) {
+      uniqueFolder = folder.substring(0, 10 - suffix.toString().length) + suffix;
+      suffix++;
+    }
+  
+    return uniqueFolder.toUpperCase();
+  }
 
+  let config = await loadConfig();
+
+  let newConfig = {
+    ...config,
+    settings: { isLoading: true }
+  }
+
+  const newGameObj = {
+    id: uuid.v6(),
+    name: gameObj.game_name,
+    selected: false,
+    game_path: gameObj.game_path,
+    folder: generateFolderName(gameObj.game_name)
+  }
+
+  console.log("newGameObj", newGameObj);
+
+  newConfig = {
+    ...config,
+    settings: { isLoading: false },
+    games: [...config.games, newGameObj]
+  }
+
+  try {
     await fs.writeFileSync(configPath, JSON.stringify(newConfig));
-
-    return newConfig;
+  } catch (error) {
+    console.log("error", error);
   }
 
-  function getDirectories(path) {
-    return fs.readdirSync(path).filter(function (file) {
-      return fs.statSync(path+'/'+file).isDirectory();
-    });
-  }
-
-  async function getFoldersInDirectory(directoryPath) {
-    try {
-      console.log("directoryPath", directoryPath);
-      
-      const items = await fsExtra.readdir(directoryPath);
-      
-      const folders = await Promise.all(items.map(async item => {
-        const itemPath = path.join(directoryPath, item);
-        const stats = await fsExtra.stat(itemPath);
-        return stats.isDirectory() ? item : null;
-      }));
-
-      console.log("folders", folders);
-  
-      return folders.filter(Boolean);
-    } catch (err) {
-      console.error('Error reading the directory:', err);
-      return [];
-    }
-  }
-
-  async function hasImagesInFolder(directoryPath) {
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif'];
-
-    try {
-      const items = await fsExtra.readdir(directoryPath);
-  
-      // Check for image files based on their extension
-      const images = items.filter(item => {
-        const itemPath = path.join(directoryPath, item);
-        const ext = path.extname(itemPath).toLowerCase();
-        return imageExtensions.includes(ext);
-      });
-
-      return images;
-    } catch (err) {
-      console.error('Error reading the directory for images:', err);
-      return false;
-    }
-  }
-
-  return await saveConfig();
 });
 
 

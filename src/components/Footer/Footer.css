@@ -2,8 +2,13 @@ footer {
   position: fixed;
   display: flex;
   align-items: center;
-  justify-content: end;
+  justify-content: space-between;
   height: 5vh;
   bottom: 0;
+  left: 0;
   width: 100%;
+}
+
+footer span {
+  font-weight: 700;
 }

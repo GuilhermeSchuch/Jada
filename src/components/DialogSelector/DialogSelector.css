@@ -9,10 +9,56 @@
 }
 
 .modal-title {
-  font-size: 18px;
+  font-size: 24px;
 }
 
 .dialog-item {
-  padding: 10px;
   border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-footer {
+  border: none !important;
+}
+
+.modal-footer button {
+  background-color: transparent;
+  border: 2px solid #A8BDBF;
+  border-radius: 20px;
+  color: #EEEEEE;
+  outline: none;
+  padding: 5px 15px;
+  transition: .3s;
+}
+
+.modal-footer button:hover {
+  opacity: .7;
+}
+
+.form-text {
+  color: #EEEEEE;
+}
+
+.game-select-button {  
+  width: 100%;
+  padding: 10px;
+}
+
+.game-delete-button {
+  border: none;
+  outline: none;
+  background-color: transparent;
+  transition: .3s;
+  padding: 10px;
+}
+
+.game-delete-button:hover {
+  opacity: .7;
+}
+
+.game-delete-button svg {
+  width: 15px;
+  fill: #6E736A;
 }

@@ -1,9 +1,13 @@
 // CSS
 import "./DialogSelector.css";
 
-import PrimaryButton from "../PrimaryButton/PrimaryButton";
+// Components
+import { PrimaryButton, AddGameModal } from "../";
 
-const DialogSelector = ({ data, title, handleSelection }) => {  
+// Icons
+import { DeleteIcon } from "../Icons";
+
+const DialogSelector = ({ data, title, handleSelection, handleDeleteGame, setGames }) => {  
   return (
     <>
       <div data-bs-toggle="modal" data-bs-target="#gamesModal">
@@ -20,17 +24,40 @@ const DialogSelector = ({ data, title, handleSelection }) => {
               {data && data.map((item) => (
                   <p
                     key={item.id}
-                    className="border dialog-item cursor-pointer"
-                    data-bs-dismiss="modal"
-                    onClick={() => handleSelection(item)}
+                    className="border dialog-item"
                   >
-                    { item.name }
+                    <span
+                      className="game-select-button cursor-pointer"
+                      data-bs-dismiss="modal"
+                      onClick={() => handleSelection(item)}
+                    >
+                      { item.name }
+                    </span>
+
+                    <button
+                      className="game-delete-button"
+                      onClick={() => handleDeleteGame(item)}
+                    >
+                      <DeleteIcon />
+                    </button>
                   </p>
               ))}
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#addGameModal"
+              >
+                Add game
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      <AddGameModal setGames={setGames} />
     </>
   )
 }

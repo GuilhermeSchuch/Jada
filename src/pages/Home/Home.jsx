@@ -14,6 +14,9 @@ import {
 import { useEffect, useState } from "react";
 import useUpdateButtonsOnResize from "../../hooks/useUpdateButtonsOnResize";
 
+// Swal
+import Swal from "sweetalert2";
+
 const Home = () => {
   const [configData, setConfigData] = useState([]);
   const [games, setGames] = useState([]);
@@ -56,11 +59,17 @@ const Home = () => {
 
       // document.body.style.backgroundImage = `url("/assets/images/re6.jpg")`;
     }
-    else if(item.folder === "RE4" || item.name === "Resident Evil 4") {
-      const imagePath = `${window.location.origin}/resources/assets/images/re4.webp`;
+    else if(item.folder === "RE5" || item.name === "Resident Evil 5") {
+      const imagePath = `${window.location.origin}/resources/assets/images/re5.jpg`;
       document.body.style.backgroundImage = `url(${imagePath})`;
 
-      document.body.style.backgroundImage = `url("/assets/images/re4.webp")`;
+      // document.body.style.backgroundImage = `url("/assets/images/re5.jpg")`;
+    }
+    else if(item.folder === "RE4R" || item.name === "Resident Evil 4 (Remake)") {
+      const imagePath = `${window.location.origin}/resources/assets/images/re4r.webp`;
+      document.body.style.backgroundImage = `url(${imagePath})`;
+
+      // document.body.style.backgroundImage = `url("/assets/images/re4.webp")`;
     }
 
     const newGames = games.map((game) =>
@@ -70,6 +79,47 @@ const Home = () => {
     saveConfiguration(newGames);
     getMods(item);
   };
+
+  const handleDeleteGame = async (gameToDelete) => {
+    console.log("gameToDelete", gameToDelete);
+
+    Swal.fire({
+      title: "Delete this game and all the mods installed?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      background: "rgb(12, 12, 10)",
+      color: "#EEEEEE",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!"
+    }).then(async (result) => {
+      if(result.isConfirmed) {
+        setIsLoading(true);
+
+        const config = await window.electronAPI.loadConfig();
+        const games = config.games.filter((game) => game.id !== gameToDelete.id)
+
+        const newConfig = {
+          ...config,
+          games
+        }
+
+        await window?.electronAPI?.saveConfig(newConfig);
+        setGames(games);
+        setIsLoading(false);
+
+        Swal.fire({
+          title: "Success!",
+          background: "rgb(12, 12, 10)",
+          confirmButtonColor: "#3085d6",
+          color: "#EEEEEE",
+          text: "Your game has been deleted.",
+          icon: "success"
+        });
+      }
+    });
+  }
   
   const installMods = async () => {
     setIsLoading(true);
@@ -91,7 +141,11 @@ const Home = () => {
 
         if(!loadSettings.settings.isLoading) {
           setIsLoading(false);
-          await getMods(selectedGame);
+          let mods = [];
+
+          while(mods.length === 0) {
+            mods = await getMods(selectedGame);
+          }
 
           clearInterval(attempter);
         }
@@ -106,6 +160,8 @@ const Home = () => {
     if(data?.mods) {
       setMods(data.mods);
     }
+
+    return data?.mods;
   }
 
   const onSelectionChange = async (id) => {
@@ -185,8 +241,10 @@ const Home = () => {
           <div className="col-2 buttons-container">
             <DialogSelector
               data={games}
+              setGames={setGames}
               title="Choose game"
               handleSelection={handleSelection}
+              handleDeleteGame={handleDeleteGame}
             />
 
             {selectedGame && (
@@ -205,6 +263,8 @@ const Home = () => {
           )}
         </main>
       </div>
+
+      <Footer selectedGame={selectedGame}/>
     </div>
   )
 }
