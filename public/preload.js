@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Games
   addGame: async (gameObj) => ipcRenderer.invoke("add-game", gameObj),
+  launchGame: async (gameObj) => ipcRenderer.invoke("launch-game", gameObj),
 });
 
 

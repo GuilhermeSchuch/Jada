@@ -205,6 +205,10 @@ const Home = () => {
     }
   };
 
+  const launchGame = async () => {
+    await window.electronAPI.launchGame(selectedGame);
+  }
+
   return (
     <div className="container-fluid">
       <div className="col-12">
@@ -251,6 +255,7 @@ const Home = () => {
               <>
                 <PrimaryButton onClick={installMods}>Install mods</PrimaryButton>
                 <PrimaryButton onClick={() => getMods(selectedGame)}>Refresh mods</PrimaryButton>
+                <PrimaryButton onClick={launchGame}>Launch game</PrimaryButton>
               </>
             )}
           </div>

@@ -13,6 +13,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const uuid = require("uuid");
 const fsExtra = require('fs-extra');
+const { exec, execSync } = require("node:child_process");
 
 // Global Variables
 const userDataPath = app.getPath('userData');
@@ -26,6 +27,7 @@ const initialConfig = {
       "name": "Resident Evil 6",
       "selected": false,
       "game_path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Resident Evil 6\\nativePC",
+      "game_executable": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Resident Evil 6\\BH6.exe",
       "folder": "RE6"
     },
     {
@@ -33,6 +35,7 @@ const initialConfig = {
       "name": "Resident Evil 5",
       "selected": false,
       "hierarchy": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Resident Evil 5\\nativePC",
+      "game_executable": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Resident Evil 6\\BH5.exe",
       "folder": "RE5"
     }
   ],
@@ -933,7 +936,6 @@ ipcMain.handle("load-mod-list", async (event, gameObj) => {
   }
 });
 
-
 // Add game to config.json file
 ipcMain.handle("add-game", async (event, gameObj) => {
   const loadConfig = async () => {
@@ -1005,6 +1007,59 @@ ipcMain.handle("add-game", async (event, gameObj) => {
     console.log("error", error);
   }
 
+});
+
+// Launche game exe
+ipcMain.handle("launch-game", async (event, gameObj) => {  
+  try {
+    if(gameObj.game_executable.includes("steam")) {
+      const steamAppsPath = path.join("C:\\Program Files (x86)\\Steam\\steamapps");
+      const gameFolderName = path.basename(path.dirname(gameObj.name));
+      
+      const acfFiles = fs.readdirSync(steamAppsPath).filter(file => file.endsWith(".acf"));
+  
+      let appId = null;
+  
+      for(const acfFile of acfFiles) {
+        const acfFilePath = path.join(steamAppsPath, acfFile);
+        const content = fs.readFileSync(acfFilePath, "utf8");
+  
+        if(content.toLowerCase().includes(gameFolderName.toLowerCase())) {
+          appId = path.basename(acfFile).match(/\d+/)[0];
+          break;
+        }
+      }
+  
+      if(!appId) {
+        throw new Error(`Could not determine appid for game: ${gameFolderName}`);
+      }
+  
+      const isSteamRunning = execSync("tasklist").toString().toLowerCase().includes("steam.exe");
+      if(!isSteamRunning) {
+        execSync('"C:\\Program Files (x86)\\Steam\\Steam.exe"');
+      }
+      
+      exec(`start steam://run/${appId}`, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error launching game: ${error.message}`);
+          return;
+        }
+        console.log(`Game launched successfully (appid: ${appId})`);
+      });
+    }
+    else {
+      const quotedPath = `"${gameObj.game_executable}"`;
+      exec(quotedPath, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error launching game: ${error.message}`);
+          return;
+        }
+        console.log(`Game launched successfully`);
+      });
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+  }
 });
 
 

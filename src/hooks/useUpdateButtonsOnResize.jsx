@@ -8,7 +8,8 @@ import { createRoot } from "react-dom/client";
 import {
   GamepadIcon,
   InstallIcon,
-  RefreshIcon
+  RefreshIcon,
+  LaunchIcon
 } from "../components/Icons";
 
 const useUpdateButtonsOnResize = (className, breakpoint, dependency) => {
@@ -76,6 +77,9 @@ const getButtonIcon = (title) => {
 
     case "Refresh mods":
       return <RefreshIcon />;
+
+    case "Launch game":
+      return <LaunchIcon />;
 
     default:
       return null;
